@@ -1,0 +1,34 @@
+[project]
+name = "UW-timetable-planner"
+version = "0.1.0"
+description = "A timetable planner for UW students."
+authors = [{ name = "Harry", email = "Harry0259@163.com" }]
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+dependencies = ["pydantic"]
+
+
+[project.urls]
+Homepage = "https://github.com/Harry-Jing"
+
+
+[tool.pyright]
+include = ["src"]
+pythonVersion = "3.12"
+typeCheckingMode = "basic"
+
+
+[tool.black]
+target-version = ["py312"]
+# skip-string-normalization = true
+
+
+[tool.isort]
+profile = "black"
+py_version = 311 # isort dosn't support 3.12 yet
+length_sort = true
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
