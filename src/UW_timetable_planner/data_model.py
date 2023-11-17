@@ -1,5 +1,3 @@
-from typing import Optional
-
 from pydantic import BaseModel
 
 
@@ -14,8 +12,8 @@ class SubSection(BaseModel):
 
 
 class Lecture(BaseModel):
-    quiz: Optional[list[SubSection]] = None
-    laboratory: Optional[list[SubSection]] = None
+    quiz: list[SubSection] = []
+    laboratory: list[SubSection] = []
     times: list[ClassTime]
 
 
