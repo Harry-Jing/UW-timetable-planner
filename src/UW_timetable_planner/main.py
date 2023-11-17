@@ -1,5 +1,4 @@
 import httpx
-from UW_MyPlan.main import get_course_details
 
 from .data_model import Course, Lecture
 
