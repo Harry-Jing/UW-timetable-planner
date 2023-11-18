@@ -1,16 +1,10 @@
 import re
 from enum import IntEnum
-from typing import Any, Literal
+from typing import Literal
 from datetime import time, datetime
 
+import httpx
 from pydantic import BaseModel
-
-
-def get_course_details_local(course_code: str) -> dict:
-    import json
-
-    with open(f"tests/data/{course_code}.json") as f:
-        return json.load(f)
 
 
 class Weekday(IntEnum):
@@ -102,7 +96,7 @@ class Lecture(Section):
     quizzes: list[Quiz] = []
     laboratories: list[Laboratory] = []
 
-    def add_subsection(self, subsection: Laboratory | Quiz):
+    def add_subsection(self, subsection: SubSection):
         if isinstance(subsection, Quiz):
             self.quizzes.append(subsection)
         if isinstance(subsection, Laboratory):
@@ -111,33 +105,43 @@ class Lecture(Section):
 
 class Course(BaseModel):
     code: str
+    credit: int
+    course_title: str
     lectures: list[Lecture]
 
     @classmethod
-    def corse_code(cls, course_code: str) -> "Course":
-        data: dict = get_course_details_local(course_code)
-        sections = []
+    def from_data(cls, data: dict) -> "Course":
+        course_summary_details: dict = data["courseSummaryDetails"]
+        section_items: list[dict] = data["courseOfferingInstitutionList"][0][
+            "courseOfferingTermList"
+        ][0]["activityOfferingItemList"]
 
-        for i in data["courseOfferingInstitutionList"][0]["courseOfferingTermList"][0][
-            "activityOfferingItemList"
-        ]:
-            sections.append(Section.from_data(i))
+        sections = [Section.from_data(i) for i in section_items]
 
         lectures = []
         for section in sections:
-            if isinstance(section, Lecture):
-                lectures.append(section)
-                for subsection in sections:
-                    if isinstance(subsection, Quiz) or isinstance(
-                        subsection, Laboratory
-                    ):
-                        section.add_subsection(subsection)
+            if not isinstance(section, Lecture):
+                continue
 
-        return cls(code=course_code, lectures=lectures)
+            lectures.append(section)
 
+            for subsection in sections:
+                if isinstance(subsection, SubSection) and subsection.code.startswith(
+                    section.code
+                ):
+                    section.add_subsection(subsection)
 
-if __name__ == "__main__":
-    from rich import print
+        return cls(
+            code=f"{course_summary_details['subjectArea']} {course_summary_details['courseNumber']}",
+            credit=course_summary_details["credit"],
+            course_title=course_summary_details["courseTitle"],
+            lectures=lectures,
+        )
 
-    course = Course.corse_code("CSE 122")
-    print(course)
+    @classmethod
+    def from_course_code(cls, course_code: str) -> "Course":
+        response = httpx.get(
+            f"https://course-app-api.planning.sis.uw.edu/api/courses/{course_code}/details"
+        )
+
+        return cls.from_data(response.json())
