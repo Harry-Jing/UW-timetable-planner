@@ -3,71 +3,68 @@ from typing import Self
 from pydantic import BaseModel
 
 from .utils import check_conflict
-from .course import Quiz, Lecture, Section, Laboratory, SubSection
+from .course import Section, SubSection, PrimarySection
 
 
 class ScheduledSection(Section):
     @classmethod
     def from_section(cls, section: Section) -> Self:
-        return cls(code=section.code, times=section.times)
+        return cls(**section.model_dump())
 
 
-class ScheduledLecture(ScheduledSection):
+class ScheduledPrimarySection(ScheduledSection, PrimarySection):
+    # TODO: Optimise this
     @classmethod
-    def from_lecture(cls, lecture: Lecture) -> Self:
-        return cls.from_section(lecture)
+    def from_primary_section(cls, primary_section: PrimarySection) -> Self:
+        c = cls.from_section(primary_section)
+        c.sub_sections = {}
+        return c
 
 
 class ScheduledSubSection(ScheduledSection, SubSection):
-    pass
-
-
-class ScheduledQuiz(ScheduledSubSection, Quiz):
     @classmethod
-    def from_quiz(cls, subsection: SubSection) -> Self:
-        return cls.from_section(subsection)
-
-
-class ScheduledLaboratory(ScheduledSubSection, Laboratory):
-    @classmethod
-    def from_laboratory(cls, subsection: SubSection) -> Self:
+    def from_subsection(cls, subsection: SubSection) -> Self:
         return cls.from_section(subsection)
 
 
 class ScheduledCourse(BaseModel):
     code: str
-    lecture: ScheduledLecture
-    quiz: ScheduledQuiz | None = None
-    laboratory: ScheduledLaboratory | None = None
+    primary_section: ScheduledPrimarySection
+    subsection: list[ScheduledSubSection] = []
 
     def check_conflict(self, section: Section) -> bool:
         """Check if a section has conflict with this scheduled course.
         Return True if there is a conflict, False otherwise."""
-        for time1 in section.times:
-            if any(check_conflict(time1, time2) for time2 in self.lecture.times):
-                return True
-            if self.quiz and any(
-                check_conflict(time1, time2) for time2 in self.quiz.times
+        for d1 in section.details_of_meetings:
+            if any(
+                check_conflict(d1.class_time, d2.class_time)
+                for d2 in self.primary_section.details_of_meetings
             ):
                 return True
-            if self.laboratory and any(
-                check_conflict(time1, time2) for time2 in self.laboratory.times
-            ):
-                return True
+
+            for subsection in self.subsection:
+                if any(
+                    check_conflict(d1.class_time, d2.class_time)
+                    for d2 in subsection.details_of_meetings
+                ):
+                    return True
         return False
 
 
 class Timetable(BaseModel):
     timetable: list[ScheduledCourse]
 
-    def pop(self):
+    def pop(self) -> None:
         self.timetable.pop()
 
     def check_conflict(self, section: Section) -> bool:
-        for scheduled_course in self.timetable:
-            if scheduled_course.check_conflict(section):
-                return True
-        return False
+        """Check if a section has conflict with this timetable.
+        Return True if there is a conflict, False otherwise."""
 
-    def add_scheduled_course(self, scheduled_course: ScheduledCourse):
+        return any(
+            scheduled_course.check_conflict(section)
+            for scheduled_course in self.timetable
+        )
+
+    def add_scheduled_course(self, scheduled_course: ScheduledCourse) -> None:
         self.timetable.append(scheduled_course)

@@ -7,41 +7,24 @@ from .utils import check_conflict
 from .course import Section, Weekday, ClassTime
 
 
+# TODO: Split filters into excluded and included filters
 class SectionFilters(BaseModel):
     """Filters for Section objects."""
 
     exclueded_times: list[ClassTime] = []
-
-    @classmethod
-    def test_filter(cls):
-        exclueded_times = [
-            ClassTime(
-                start_time=time(6, 30), end_time=time(12, 30), day=Weekday.MONDAY
-            ),
-            ClassTime(
-                start_time=time(6, 30), end_time=time(12, 30), day=Weekday.TUESDAY
-            ),
-            ClassTime(
-                start_time=time(6, 30), end_time=time(12, 30), day=Weekday.WEDNESDAY
-            ),
-            ClassTime(
-                start_time=time(6, 30), end_time=time(12, 30), day=Weekday.THURSDAY
-            ),
-            ClassTime(
-                start_time=time(6, 30), end_time=time(12, 30), day=Weekday.FRIDAY
-            ),
-        ]
-
-        return cls(exclueded_times=exclueded_times)
+    included_times: list[ClassTime] = []
 
     def check_conflict(self, section: Section) -> bool:
         """Check if a section has conflict with this filter.
         Return True if there is a conflict, False otherwise."""
 
         # Check if any of the section times conflicts with any of the excluded times
+        # TODO: Optimise it
         if any(
-            check_conflict(time1, time2)
-            for time1, time2 in product(section.times, self.exclueded_times)
+            check_conflict(details.class_time, time2)
+            for details, time2 in product(
+                section.details_of_meetings, self.exclueded_times
+            )
         ):
             return True
         return False
