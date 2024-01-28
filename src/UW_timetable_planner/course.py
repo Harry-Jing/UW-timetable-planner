@@ -60,6 +60,14 @@ class LearningFormat(StrEnum):
     ASYNCHRONOUS_ONLINE = "Asynchronous Online"
     HYBRID = "Hybrid"
 
+    @property
+    def is_online(self) -> bool:
+        return self in (
+            LearningFormat.HYBRID,
+            LearningFormat.SYNCHRONOUS_ONLINE,
+            LearningFormat.ASYNCHRONOUS_ONLINE,
+        )
+
     @classmethod
     def from_str(cls, string: str) -> "LearningFormat":
         match string:
@@ -150,6 +158,7 @@ class Section(BaseModel):
     instructors: list[str]
     status: SectionStatus
     is_add_code_required: bool
+    time_mask_flag: bool
 
     @classmethod
     def from_data(cls, data: dict) -> Self:
@@ -164,6 +173,7 @@ class Section(BaseModel):
             enroll_maximum=data["enrollMaximum"],
             enroll_count=data["enrollCount"],
         )
+        time_mask_flag = data["timeMaskFlag"]
 
         meetings_details = []
         for meeting_detail in data["meetingDetailsList"]:
@@ -179,20 +189,21 @@ class Section(BaseModel):
             instructors=instructors,
             status=status,
             is_add_code_required=is_add_code_required,
+            time_mask_flag=time_mask_flag,
         )
 
 
-class SubSection(Section):
+class Subsection(Section):
     pass
 
 
 class PrimarySection(Section):
-    sub_sections: dict[SectionType, list[SubSection]] = {}
+    subsections: dict[SectionType, list[Subsection]] = {}
 
-    def add_subsection(self, subsection: SubSection) -> None:
-        if subsection.type not in self.sub_sections:
-            self.sub_sections[subsection.type] = []
-        self.sub_sections[subsection.type].append(subsection)
+    def add_subsection(self, subsection: Subsection) -> None:
+        if subsection.type not in self.subsections:
+            self.subsections[subsection.type] = []
+        self.subsections[subsection.type].append(subsection)
 
 
 class Lecture(PrimarySection):
@@ -221,7 +232,7 @@ class Course(BaseModel):
             else:
                 if primary_section is None:
                     raise ValueError("No primary section found")
-                subsection = SubSection.from_data(section)
+                subsection = Subsection.from_data(section)
                 if subsection.primary_section_code != primary_section.code:
                     raise ValueError("Subsection does not match primary section")
                 primary_section.add_subsection(subsection)
@@ -249,10 +260,3 @@ class Course(BaseModel):
             )
 
         return cls.from_data(response.json())
-
-
-if __name__ == "__main__":
-    from rich import print
-
-    course = Course.from_course_code("MATH 126")
-    print(course)

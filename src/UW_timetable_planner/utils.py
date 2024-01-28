@@ -1,7 +1,7 @@
 from .course import ClassTime
 
 
-def check_conflict(time1: ClassTime, time2: ClassTime) -> bool:
+def check_time_conflict(time1: ClassTime, time2: ClassTime) -> bool:
     """Check if two ClassTime objects have conflict.
     Return True if there is a conflict, False otherwise."""
     if time1.day != time2.day:
