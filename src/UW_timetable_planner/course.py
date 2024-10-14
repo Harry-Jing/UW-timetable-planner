@@ -80,16 +80,13 @@ class Section(BaseModel):
         raise ValueError(f"Invalid section code {code}")
 
 
-class SubSection(Section):
-    ...
+class SubSection(Section): ...
 
 
-class Quiz(SubSection):
-    ...
+class Quiz(SubSection): ...
 
 
-class Laboratory(SubSection):
-    ...
+class Laboratory(SubSection): ...
 
 
 class Lecture(Section):
