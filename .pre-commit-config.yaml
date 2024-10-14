@@ -1,12 +1,12 @@
 default_stages:
-  - commit
+  - pre-commit
 
 default_language_version:
   python: python3.12
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
       - id: check-yaml
       - id: check-toml
@@ -18,7 +18,7 @@ repos:
       - id: isort
 
   - repo: https://github.com/psf/black
-    rev: 23.12.1
+    rev: 24.10.0
     hooks:
       - id: black
 
@@ -30,4 +30,4 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-        stages: [push]
+        stages: [pre-push]
